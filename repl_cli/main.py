@@ -4,7 +4,7 @@ import snow_pyrepl as pyrepl
 from typing import Optional
 from replit.database import Database
 
-__version__ = "1.1.0"
+__version__ = "1.1.2"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -181,6 +181,7 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 			if "output" in x: y += 1
 			if "output" in x and y == 2: out = output[output.index(x)].split("output: \"")[1].split("\"")[0]; output2 += f"{out}\n"
 		output = output2
+		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
 		try:
 			channel2 = client.open("exec", "runner")
@@ -203,6 +204,7 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 			if "output" in x: y += 1
 			if "output" in x and y == 2: out = output[output.index(x)].split("output: \"")[1].split("\"")[0]; output2 += f"{out}\n"
 		output = output2
+		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
 		try:
 			channel2 = client.open("exec", "runner")
@@ -229,6 +231,7 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 			if "output" in x: y += 1
 			if "output" in x and y == 2: out = output[output.index(x)].split("output: \"")[1].split("\"")[0]; output2 += f"{out}\n"
 		output = output2
+		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
 		try:
 			channel2 = client.open("exec", "runner")
@@ -267,6 +270,7 @@ def shell(repl:str):
 			if "output" in x: y += 1
 			if "output" in x and y == 1: out = output[output.index(x)].split("output: \"")[1].split("\"")[0]; output2 += f"{out}\n"
 		output = output2
+		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
 	try:
 		channel2 = client.open("exec", "runner")
@@ -300,6 +304,7 @@ def exec(repl:str, cmd:str):
 		if "output" in x: y += 1
 		if "output" in x and y == 1: out = output[output.index(x)].split("output: \"")[1].split("\"")[0]; output2 += f"{out}\n"
 	output = output2
+	output = bytes(output, "utf-8").decode("unicode_escape")
 	print(output)
 	try:
 		channel2 = client.open("exec", "runner")
@@ -425,7 +430,7 @@ def user(usr:str):
 	bio = r['bio']
 	icon = r['icon']['url']
 	topLangs = " | ".join(r['topLanguages'])
-	if r['hacker']:
+	if 'hacker' in r:
 		hacker = "{Hacker}"
 	else:
 		hacker = ""
