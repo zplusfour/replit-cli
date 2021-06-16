@@ -4,7 +4,7 @@ import snow_pyrepl as pyrepl
 from typing import Optional
 from replit.database import Database
 
-__version__ = "1.0.9"
+__version__ = "1.1.0"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -105,6 +105,7 @@ def push():
 	files2 = glob.glob(".*")
 	for file in files2:
 		files.append(file)
+	done = []
 	for file in files:
 		print(f"FILE/DIR FOUND - {file}")
 		if "connect.sid" not in file and ".replitcliconfig" not in file:
@@ -112,28 +113,13 @@ def push():
 			if "." not in file:
 				newfile = file + "/"
 
-			cancontinue = True
-			if not "." in newfile:
-				cancontinue = False
-
-			while not cancontinue:
+			if "." not in newfile:
 				filelist = glob.glob(f"{newfile}*")
 				typer.echo("Found Sub-Files/Dirs")
 				for file in filelist:
-					if "__pycache__" not in file:
-						files.append(file.replace("\\", "/"))
-						file = file.replace("\\", "/")
-						typer.echo(f"Appending file {file} to list.")
-					if not "." in file:
-						if not "__pycache__" in file:
-							cancontinue = False
-						else:
-							typer.echo("Found Pycache, reached end of list, ending loop...")
-							cancontinue = True
-							break
-					elif file == filelist[-1]:
-						cancontinue = True
-						break
+					files.append(file.replace("\\", "/"))
+					file = file.replace("\\", "/")
+					typer.echo(f"Appending file {file} to list.")
 
 			if "." in newfile:
 				print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
@@ -144,6 +130,8 @@ def push():
 				"content": open(newfile, "r").read()
 				}),
 				headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+
+			done.append(newfile)
 	typer.echo("Remote Repl Refreshed Successfully")
 
 @app.command(help="Authenticate with Replit CLI.\n\nTo get your SID value, check the cookie named 'connect.sid' when you visit Replit in your browser.")
