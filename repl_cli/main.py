@@ -4,7 +4,7 @@ import snow_pyrepl as pyrepl
 from typing import Optional
 from replit.database import Database
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -183,15 +183,7 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 		output = output2
 		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
-		try:
-			channel2 = client.open("exec", "runner")
-			channel2.get_output({
-				"exec": {
-					"args": ['kill', '1']
-				}
-			})
-		except:
-			pass
+		client.close()
 	elif stop:
 		output = channel.get_output({
 			'clear':{
@@ -206,15 +198,7 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 		output = output2
 		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
-		try:
-			channel2 = client.open("exec", "runner")
-			channel2.get_output({
-				"exec": {
-					"args": ['kill', '1']
-				}
-			})
-		except:
-			pass
+		client.close()
 	elif restart:
 		channel.get_output({
 			'clear':{
@@ -233,15 +217,7 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 		output = output2
 		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
-		try:
-			channel2 = client.open("exec", "runner")
-			channel2.get_output({
-				"exec": {
-					"args": ['kill', '1']
-				}
-			})
-		except:
-			pass
+		client.close()
 
 @app.command(help="Connect to a bash shell with a remote repl.")
 def shell(repl:str):
