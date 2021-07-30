@@ -40,7 +40,7 @@ PS C:\>
 - Once installed, type `replit` into a shell to get started!
 
 ## Documentation
-To see the docs and for information on finding your authorization token, click [here](https://github.com/CoolCoderSJ/Replit-CLI/wiki)
+To see the docs and for more information, click [here](https://replitcli.repl.co)
 
 ## Building From Source
 To build from source, run the following commands-
