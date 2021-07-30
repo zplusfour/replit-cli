@@ -1,10 +1,11 @@
-import typer, requests, os, zipfile, glob, shutil, json, time
+import typer, requests, os, zipfile, glob, shutil, json, sys
 from pathlib import Path
 import snow_pyrepl as pyrepl
 from typing import Optional
 from replit.database import Database
+import getpass
 
-__version__ = "1.1.3"
+__version__ = "1.1.5"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -55,40 +56,83 @@ def clone(repl:str=typer.Argument("", help="The URL of the repl which is to be c
 	typer.echo(f"Cloned Repl {replname} to /{replname}")
 
 @app.command(help="Pull the remote contents of the repl inside the working directory.")
-def pull():
-	f = open(".replitcliconfig", "r")
-	content = f.read()
-	f.close()
-	url = content.split("=")[1].split("\n")[0]
-	sid = __sid__.strip()
-	zip = requests.get(f"{url}.zip", cookies={"connect.sid": sid})
-	f = open(url.split("/")[-1]+".zip", "wb")
-	f.write(zip.content)
-	f.close()
-	with zipfile.ZipFile(url.split("/")[-1]+".zip", 'r') as zip_ref:
+def pull(override:bool=False):
+	if override:
+		f = open(".replitcliconfig", "r")
+		content = f.read()
+		f.close()
+		url = content.split("=")[1].split("\n")[0]
+		sid = __sid__.strip()
+		zip = requests.get(f"{url}.zip", cookies={"connect.sid": sid})
+		f = open(url.split("/")[-1]+".zip", "wb")
+		f.write(zip.content)
+		f.close()
+		with zipfile.ZipFile(url.split("/")[-1]+".zip", 'r') as zip_ref:
+			files = glob.glob("*")
+			for file in files:
+				if file != url.split("/")[-1]+".zip":
+					if not "." in file:
+						shutil.rmtree(file)
+					else:
+						os.remove(file)
+			zip_ref.extractall("")
+		os.remove(url.split("/")[-1]+".zip")
+		name = url.split("/")[-1]
+		f = open(f".replitcliconfig", "w")
+		slug = url.split("/@")[-1]
+		r = requests.get(f"https://replit.com/data/repls/@{slug}", cookies={"connect.sid": sid}).json()
+		id = r['id']
+		print(f"""url={url}\nid={id}""", file=f)
+		f.close()
+		f = open(f"connect.sid", "w")
+		print(f"""{sid}""", file=f)
+		f.close()
+	else:
+		f = open(".replitcliconfig", "r")
+		content = f.read()
+		f.close()
+		url = content.split("=")[1].split("\n")[0]
+		sid = __sid__.strip()
+		slug = url.split("/@")[-1]
+		zip = requests.get(f"{url}.zip", cookies={"connect.sid": sid})
+		f = open(url.split("/")[-1]+".zip", "wb")
+		f.write(zip.content)
+		f.close()
+		with zipfile.ZipFile(url.split("/")[-1]+".zip", 'r') as zip_ref:
+			zip_ref.extractall(".temp")
+		os.remove(url.split("/")[-1]+".zip")
 		files = glob.glob("*")
+		files2 = glob.glob(".*")
+		for file in files2:
+			files.append(file)
+		done = []
 		for file in files:
-			if file != url.split("/")[-1]+".zip":
-				if not "." in file:
-					shutil.rmtree(file)
-				else:
-					os.remove(file)
-		zip_ref.extractall("")
-	os.remove(url.split("/")[-1]+".zip")
-	name = url.split("/")[-1]
-	f = open(f".replitcliconfig", "w")
-	slug = url.split("/@")[-1]
-	r = requests.get(f"https://replit.com/data/repls/@{slug}", cookies={"connect.sid": sid}).json()
-	id = r['id']
-	print(f"""url={url}\nid={id}""", file=f)
-	f.close()
-	f = open(f"connect.sid", "w")
-	print(f"""{sid}""", file=f)
-	f.close()
+			# print(f"FILE/DIR FOUND - {file}")
+			if "connect.sid" not in file and ".replitcliconfig" not in file:
+				newfile = file
+				if "." not in file:
+					newfile = file + "/"
+
+				if "." not in newfile:
+					filelist = glob.glob(f"{newfile}*")
+					for file in filelist:
+						files.append(file.replace("\\", "/"))
+						file = file.replace("\\", "/")
+
+				if "." in newfile:
+					try:
+						output = open(f".temp/{newfile}", "r").read()
+						f = open(newfile, "w")
+						f.write(output)
+						f.close()
+					except:
+						output = None
+					done.append(newfile)
+		shutil.rmtree(".temp")
 	typer.echo(f"Refreshed Local Repl Dir")
 
 @app.command(help="Push changes to the server and override remote.")
-def push():
+def push(override:bool=False):
 	f = open(".replitcliconfig", "r")
 	content = f.read()
 	f.close()
@@ -101,47 +145,149 @@ def push():
 		typer.echo("You do not have the correct permissions to write to this repl.")
 		return
 
-	files = glob.glob("*")
-	files2 = glob.glob(".*")
-	for file in files2:
-		files.append(file)
-	done = []
-	for file in files:
-		print(f"FILE/DIR FOUND - {file}")
-		if "connect.sid" not in file and ".replitcliconfig" not in file:
-			newfile = file
-			if "." not in file:
-				newfile = file + "/"
+	if not override:
+		files = glob.glob("*")
+		files2 = glob.glob(".*")
+		for file in files2:
+			files.append(file)
+		done = []
+		for file in files:
+			print(f"FILE/DIR FOUND - {file}")
+			if "connect.sid" not in file and ".replitcliconfig" not in file:
+				newfile = file
+				if "." not in file:
+					newfile = file + "/"
 
-			if "." not in newfile:
-				filelist = glob.glob(f"{newfile}*")
-				typer.echo("Found Sub-Files/Dirs")
-				for file in filelist:
-					files.append(file.replace("\\", "/"))
-					file = file.replace("\\", "/")
-					typer.echo(f"Appending file {file} to list.")
+				if "." not in newfile:
+					filelist = glob.glob(f"{newfile}*")
+					typer.echo("Found Sub-Files/Dirs")
+					for file in filelist:
+						files.append(file.replace("\\", "/"))
+						file = file.replace("\\", "/")
+						typer.echo(f"Appending file {file} to list.")
 
-			if "." in newfile:
-				print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
-				requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
-				"UUID": uuid,
-				"SID": sid,
-				"filepath": newfile,
-				"content": open(newfile, "r").read()
-				}),
-				headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+				if "." in newfile:
+					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
+					requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
+					"UUID": uuid,
+					"SID": sid,
+					"filepath": newfile,
+					"content": open(newfile, "rb").read().decode("utf-8")
+					}),
+					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
-			done.append(newfile)
-	typer.echo("Remote Repl Refreshed Successfully")
+				done.append(newfile)
+		typer.echo("Remote Repl Refreshed Successfully")
+	else:
+		zip = requests.get(f"{url}.zip", cookies={"connect.sid": sid})
+		f = open(url.split("/")[-1]+".zip", "wb")
+		f.write(zip.content)
+		f.close()
+		with zipfile.ZipFile(url.split("/")[-1]+".zip", 'r') as zip_ref:
+			zip_ref.extractall(".temp")
+		os.remove(url.split("/")[-1]+".zip")
+		files = glob.glob(".temp/*")
+		files2 = glob.glob(".temp/.*")
+		for file in files2:
+			files.append(file.replace("\\", "/"))
+		done = []
+		for file in files:
+			file = file.replace("\\", "/")
+			if "connect.sid" not in file and ".replitcliconfig" not in file:
+				newfile = file
+				if "." not in file:
+					newfile = file + "/"
+
+				if "." not in newfile:
+					filelist = glob.glob(f"{newfile}*")
+					for file in filelist:
+						files.append(file.replace("\\", "/"))
+						file = file.replace("\\", "/")
+
+				if "." in newfile:
+					requests.delete("https://replops.coolcodersj.repl.co", data=json.dumps({
+					"UUID": uuid,
+					"SID": sid,
+					"filepath": newfile.split(".temp/")[-1],
+					}),
+					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+
+				done.append(newfile)
+		shutil.rmtree(".temp")
+		files = glob.glob("*")
+		files2 = glob.glob(".*")
+		for file in files2:
+			files.append(file)
+		done = []
+		for file in files:
+			print(f"FILE/DIR FOUND - {file}")
+			if "connect.sid" not in file and ".replitcliconfig" not in file:
+				newfile = file
+				if "." not in file:
+					newfile = file + "/"
+
+				if "." not in newfile:
+					filelist = glob.glob(f"{newfile}*")
+					typer.echo("Found Sub-Files/Dirs")
+					for file in filelist:
+						files.append(file.replace("\\", "/"))
+						file = file.replace("\\", "/")
+						typer.echo(f"Appending file {file} to list.")
+
+				if "." in newfile:
+					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
+					requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
+					"UUID": uuid,
+					"SID": sid,
+					"filepath": newfile,
+					"content": open(newfile, "rb").read().decode("utf-8")
+					}),
+					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+
+				done.append(newfile)
 
 @app.command(help="Authenticate with Replit CLI.\n\nTo get your SID value, check the cookie named 'connect.sid' when you visit Replit in your browser.")
-def login(sid:str):
+def login():
+		username = typer.prompt("Enter your username")
+		password = getpass.getpass()
+		openconfirm = typer.confirm("Replit Login requires an hcaptcha token. You can retrieve one from https://sjurl.tk/captcha. Would you like to visit this site?")
+		if not openconfirm:
+			typer.echo("Replit Login has been aborted since you denied access to open the hcaptcha site.")
+			return
+
+		typer.launch("https://sjurl.tk/captcha")
+		hct = typer.prompt("Please copy the token from the site and enter it here")
+
+		r = requests.get('https://replit.com/~', allow_redirects=False)
+		sid = r.cookies.get_dict()['connect.sid']
+		r = requests.post("https://replit.com/login",
+			data={
+				"username": username,
+				"password": password,
+				"hCaptchaResponse": hct,
+				"hCaptchaSiteKey": "473079ba-e99f-4e25-a635-e9b661c7dd3e",
+				"teacher": False
+			},
+			headers={
+				"User-Agent": "Mozilla/5.0",
+				'X-Requested-With': "Replit CLI",
+				"referrer": "https://replit.com"
+			},
+			cookies={
+				"connect.sid": sid
+			}
+		)
+		if not r.status_code == 200:
+			typer.echo(f"Error! An unexpected error ocurred: HTTP Status was not 200. Received status was {r.status_code}")
+			return
+
 		if not os.path.exists(f"{homedir}/replit-cli"):
 			os.mkdir(f"{homedir}/replit-cli")
 		f = open(f"{homedir}/replit-cli/connect.sid", "w")
 		print(f"""{sid}""", file=f)
 		f.close()
 		typer.echo(f"Your SID value has been set as {sid}")
+		typer.echo(f"You have been logged in as {username}!")
 
 @app.command(help="Run, Stop, or Restart a Repl from your local machine.\nDefault option is run, add the --stop or --restart option to change mode.")
 def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
@@ -427,5 +573,11 @@ Repls -
 	"""
 	typer.echo(text)
 
-if __name__ == "main":
-	app()
+@app.command()
+def pip(operation:str):
+	typer.echo(f"Running Operation: {operation}")
+	os.system(f"pip {operation}")
+	typer.echo("Updating pip config...")
+	os.system("pip freeze > requirements.txt")
+
+app()
