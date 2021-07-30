@@ -36,7 +36,7 @@ PS C:\>
 
 ## Installation
 - Make sure you have Python 3.6 or higher installed. To do so, type `python` inside of a Command Prompt/Terminal instance. If you have Python installed, a Python shell will come up with the version number. (type ` quit() ` inside of the python shell to quit it) If you do not have Python 3.6+ or do not have Python at all, you can install it by downloading the installer for your platform located [here](https://www.python.org/downloads/)
-- Once you have python, run the following command- ` pip install repl-cli `, preferably with Administrator access (This includes Administrator accounts on macOS, and `Run as Administrator` on Windows) to make sure that your PC recognizes Replit CLI properly. 
+- Once you have python, run the following command- ` pip install repl-cli `, preferably with Administrator access (Unix platforms do not need admin access, and `Run as Administrator` on Windows) to make sure that your PC recognizes Replit CLI properly. 
 - Once installed, type `replit` into a shell to get started!
 
 ## Documentation
