@@ -5,7 +5,7 @@ from typing import Optional
 from replit.database import Database
 import getpass
 
-__version__ = "1.1.5"
+__version__ = "1.1.6"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -247,47 +247,55 @@ def push(override:bool=False):
 				done.append(newfile)
 
 @app.command(help="Authenticate with Replit CLI.\n\nTo get your SID value, check the cookie named 'connect.sid' when you visit Replit in your browser.")
-def login():
-		username = typer.prompt("Enter your username")
-		password = getpass.getpass()
-		openconfirm = typer.confirm("Replit Login requires an hcaptcha token. You can retrieve one from https://sjurl.tk/captcha. Would you like to visit this site?")
-		if not openconfirm:
-			typer.echo("Replit Login has been aborted since you denied access to open the hcaptcha site.")
-			return
-
-		typer.launch("https://sjurl.tk/captcha")
-		hct = typer.prompt("Please copy the token from the site and enter it here")
-
-		r = requests.get('https://replit.com/~', allow_redirects=False)
-		sid = r.cookies.get_dict()['connect.sid']
-		r = requests.post("https://replit.com/login",
-			data={
-				"username": username,
-				"password": password,
-				"hCaptchaResponse": hct,
-				"hCaptchaSiteKey": "473079ba-e99f-4e25-a635-e9b661c7dd3e",
-				"teacher": False
-			},
-			headers={
-				"User-Agent": "Mozilla/5.0",
-				'X-Requested-With': "Replit CLI",
-				"referrer": "https://replit.com"
-			},
-			cookies={
-				"connect.sid": sid
-			}
-		)
-		if not r.status_code == 200:
-			typer.echo(f"Error! An unexpected error ocurred: HTTP Status was not 200. Received status was {r.status_code}")
-			return
-
+def login(sid:str=None):
+	if sid != None:
 		if not os.path.exists(f"{homedir}/replit-cli"):
 			os.mkdir(f"{homedir}/replit-cli")
-		f = open(f"{homedir}/replit-cli/connect.sid", "w")
-		print(f"""{sid}""", file=f)
-		f.close()
-		typer.echo(f"Your SID value has been set as {sid}")
-		typer.echo(f"You have been logged in as {username}!")
+			f = open(f"{homedir}/replit-cli/connect.sid", "w")
+			print(f"""{sid}""", file=f)
+			f.close()
+			typer.echo(f"Your SID value has been set as {sid}")
+			return
+	username = typer.prompt("Enter your username")
+	password = getpass.getpass()
+	openconfirm = typer.confirm("Replit Login requires an hcaptcha token. You can retrieve one from https://sjurl.tk/captcha. Would you like to visit this site?")
+	if not openconfirm:
+		typer.echo("Replit Login has been aborted since you denied access to open the hcaptcha site.")		
+		return
+
+	typer.launch("https://sjurl.tk/captcha")
+	hct = typer.prompt("Please copy the token from the site and enter it here")
+
+	r = requests.get('https://replit.com/~', allow_redirects=False)
+	sid = r.cookies.get_dict()['connect.sid']
+	r = requests.post("https://replit.com/login",
+		data={
+			"username": username,
+			"password": password,
+			"hCaptchaResponse": hct,
+				"hCaptchaSiteKey": "473079ba-e99f-4e25-a635-e9b661c7dd3e",
+			"teacher": False
+		},
+		headers={
+			"User-Agent": "Mozilla/5.0",
+			'X-Requested-With': "Replit CLI",
+				"referrer": "https://replit.com"
+		},
+		cookies={
+			"connect.sid": sid
+		}
+	)
+	if not r.status_code == 200:
+		typer.echo(f"Error! An unexpected error ocurred: HTTP Status was not 200. Received status was {r.status_code}")
+		return
+
+	if not os.path.exists(f"{homedir}/replit-cli"):
+		os.mkdir(f"{homedir}/replit-cli")
+	f = open(f"{homedir}/replit-cli/connect.sid", "w")
+	print(f"""{sid}""", file=f)
+	f.close()
+	typer.echo(f"Your SID value has been set as {sid}")
+	typer.echo(f"You have been logged in as {username}!")
 
 @app.command(help="Run, Stop, or Restart a Repl from your local machine.\nDefault option is run, add the --stop or --restart option to change mode.")
 def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
