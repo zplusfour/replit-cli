@@ -5,7 +5,7 @@ from typing import Optional
 from replit.database import Database
 import getpass
 
-__version__ = "1.1.6"
+__version__ = "1.1.7"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -151,22 +151,25 @@ def push(override:bool=False):
 		for file in files2:
 			files.append(file)
 		done = []
+		noExtFile = False
 		for file in files:
 			print(f"FILE/DIR FOUND - {file}")
 			if "connect.sid" not in file and ".replitcliconfig" not in file:
 				newfile = file
 				if "." not in file:
 					newfile = file + "/"
-
-				if "." not in newfile:
 					filelist = glob.glob(f"{newfile}*")
-					typer.echo("Found Sub-Files/Dirs")
-					for file in filelist:
-						files.append(file.replace("\\", "/"))
-						file = file.replace("\\", "/")
-						typer.echo(f"Appending file {file} to list.")
+					if filelist == []:
+						noExtFile = True
+						newfile = file
+					else:
+						typer.echo("Found Sub-Files/Dirs")
+						for file in filelist:
+							files.append(file.replace("\\", "/"))
+							file = file.replace("\\", "/")
+							typer.echo(f"Appending file {file} to list.")
 
-				if "." in newfile:
+				if "." in newfile or noExtFile:
 					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
 					requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
 					"UUID": uuid,
@@ -177,6 +180,7 @@ def push(override:bool=False):
 					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
 				done.append(newfile)
+				noExtFile = False
 		typer.echo("Remote Repl Refreshed Successfully")
 	else:
 		zip = requests.get(f"{url}.zip", cookies={"connect.sid": sid})
@@ -191,20 +195,23 @@ def push(override:bool=False):
 		for file in files2:
 			files.append(file.replace("\\", "/"))
 		done = []
+		noExtFile = False
 		for file in files:
 			file = file.replace("\\", "/")
 			if "connect.sid" not in file and ".replitcliconfig" not in file:
 				newfile = file
 				if "." not in file:
 					newfile = file + "/"
-
-				if "." not in newfile:
 					filelist = glob.glob(f"{newfile}*")
-					for file in filelist:
-						files.append(file.replace("\\", "/"))
-						file = file.replace("\\", "/")
+					if filelist == []:
+						noExtFile = True
+						newfile = file
+					else:
+						for file in filelist:
+							files.append(file.replace("\\", "/"))
+							file = file.replace("\\", "/")
 
-				if "." in newfile:
+				if "." in newfile or noExtFile:
 					requests.delete("https://replops.coolcodersj.repl.co", data=json.dumps({
 					"UUID": uuid,
 					"SID": sid,
@@ -213,6 +220,7 @@ def push(override:bool=False):
 					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
 				done.append(newfile)
+				noExtFile = False
 		shutil.rmtree(".temp")
 		files = glob.glob("*")
 		files2 = glob.glob(".*")
@@ -260,7 +268,7 @@ def login(sid:str=None):
 	password = getpass.getpass()
 	openconfirm = typer.confirm("Replit Login requires an hcaptcha token. You can retrieve one from https://sjurl.tk/captcha. Would you like to visit this site?")
 	if not openconfirm:
-		typer.echo("Replit Login has been aborted since you denied access to open the hcaptcha site.")		
+		typer.echo("Replit Login has been aborted since you denied access to open the hcaptcha site.")
 		return
 
 	typer.launch("https://sjurl.tk/captcha")
