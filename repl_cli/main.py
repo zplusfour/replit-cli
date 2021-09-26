@@ -5,7 +5,7 @@ from typing import Optional
 from replit.database import Database
 import getpass
 
-__version__ = "1.1.7"
+__version__ = "1.1.8"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -16,7 +16,17 @@ except:
 app = typer.Typer()
 
 def get_json(user, replname, sid):
-	return requests.get(f"https://replit.com/data/repls/@{user}/{replname}", cookies={"connect.sid": sid}).json()
+	headers = {
+		'Content-Type': 'application/json',
+		'connect.sid': sid,
+		'X-Requested-With': 'https://replit.com',
+		'Origin': 'https://replit.com',
+		'User-Agent': 'Mozilla/5.0'
+	}
+	cookies = {
+		"connect.sid": sid
+	}
+	r = requests.get(f"https://replit.com/data/repls/@{user}/{replname}", headers=headers, cookies=cookies)
 
 @app.callback()
 def callback(ctx: typer.Context):
@@ -140,10 +150,18 @@ def push(override:bool=False):
 	uuid = content.split("=")[-1].strip()
 	sid = __sid__.strip()
 	slug = url.split("/@")[-1].split("\n")[0].strip()
+	user, replname = slug.split("/")[0], slug.split("/")[1]
 	data = requests.get(f"https://replit.com/data/repls/@{slug}", cookies={"connect.sid": sid}).json()
 	if not data['is_owner']:
 		typer.echo("You do not have the correct permissions to write to this repl.")
 		return
+
+	key = __sid__.strip()
+	token, url = pyrepl.get_token(user, replname, key)
+	id = get_json(user, replname, key)
+	client = pyrepl.Client(token, id, url)
+	channel = client.open('gcsfiles', 'file_persister')
+	channel.get_output({"persist": { path: "" }})
 
 	if not override:
 		files = glob.glob("*")
@@ -171,13 +189,7 @@ def push(override:bool=False):
 
 				if "." in newfile or noExtFile:
 					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
-					requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
-					"UUID": uuid,
-					"SID": sid,
-					"filepath": newfile,
-					"content": open(newfile, "rb").read().decode("utf-8")
-					}),
-					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+					channel.get_output({"write": {"path": newfile, "content": open(newfile, "r").read()}})
 
 				done.append(newfile)
 				noExtFile = False
@@ -212,12 +224,7 @@ def push(override:bool=False):
 							file = file.replace("\\", "/")
 
 				if "." in newfile or noExtFile:
-					requests.delete("https://replops.coolcodersj.repl.co", data=json.dumps({
-					"UUID": uuid,
-					"SID": sid,
-					"filepath": newfile.split(".temp/")[-1],
-					}),
-					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+					channel.get_output({"remove": {"path": newfile}})
 
 				done.append(newfile)
 				noExtFile = False
@@ -244,13 +251,7 @@ def push(override:bool=False):
 
 				if "." in newfile:
 					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
-					requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
-					"UUID": uuid,
-					"SID": sid,
-					"filepath": newfile,
-					"content": open(newfile, "rb").read().decode("utf-8")
-					}),
-					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+					channel.get_output({"write": {"path": newfile, "content": open(newfile, "r").read()}})
 
 				done.append(newfile)
 
@@ -326,9 +327,9 @@ def run(repl:str, run:bool=True, stop:bool=False, restart:bool=False):
 	user = repl.split("/")[0]
 	replname = repl.split("/")[1]
 
-	id = get_json(user, replname, sid)['id']
 	key = __sid__.strip()
-	token, url = pyrepl.get_token(id, key)
+	token, url = pyrepl.get_token(user, replname, key)
+	id = get_json(user, replname, key)
 	client = pyrepl.Client(token, id, url)
 	channel = client.open('shellrun2', 'runner')
 	if run:
@@ -387,8 +388,8 @@ def shell(repl:str):
 	replname = repl.split("/")[1]
 
 	key = __sid__.strip()
-	id = get_json(user, replname, key)['id']
-	token, url = pyrepl.get_token(id, key)
+	token, url = pyrepl.get_token(user, replname, key)
+	id = get_json(user, replname, key)
 	client = pyrepl.Client(token, id, url)
 	channel = client.open('exec', 'runner')
 	while True:
@@ -426,8 +427,8 @@ def exec(repl:str, cmd:str):
 	replname = repl.split("/")[1]
 
 	key = __sid__.strip()
-	id = get_json(user, replname, key)['id']
-	token, url = pyrepl.get_token(id, key)
+	token, url = pyrepl.get_token(user, replname, key)
+	id = get_json(user, replname, key)
 	client = pyrepl.Client(token, id, url)
 	channel = client.open('exec', 'runner')
 	output = channel.get_output({
@@ -477,6 +478,19 @@ def env(contents:bool=True, key:str="", value:str="", delete:str=""):
 	r = requests.get(f"https://replit.com/data/repls/@{slug}", cookies={"connect.sid": sid}).json()
 	id = r['id']
 
+	user, replname = slug.split("/")[0], slug.split("/")[1]
+	data = requests.get(f"https://replit.com/data/repls/@{slug}", cookies={"connect.sid": sid}).json()
+	if not data['is_owner']:
+		typer.echo("You do not have the correct permissions to write to this repl.")
+		return
+
+	key = __sid__.strip()
+	token, url = pyrepl.get_token(user, replname, key)
+	id = get_json(user, replname, key)
+	client = pyrepl.Client(token, id, url)
+	channel = client.open('gcsfiles', 'file_persister')
+	channel.get_output({"persist": { path: "" }})
+
 	if not os.path.exists(f".tempcache/{file}"):
 		f = open(f".tempcache/{file}", "x")
 		f.close()
@@ -513,18 +527,7 @@ def env(contents:bool=True, key:str="", value:str="", delete:str=""):
 	f = open(".env", "w")
 	f.write(string)
 	f.close()
-	requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
-		"UUID": str(id.strip()),
-		"SID": sid,
-		"filepath": file,
-		"content": string
-		}
-	),
-	headers = {
-	'Content-type': 'application/json',
-	'Accept': 'text/plain'
-	}
-	)
+	channel.get_output({"write": {"path": file, "content": string}})
 
 @app.command(help="Edit the Replit DB for a Repl")
 def db(url:str, data:bool=False, key:str="", value:str="", delete:str=""):
