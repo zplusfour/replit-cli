@@ -27,6 +27,7 @@ def get_json(user, replname, sid):
 		"connect.sid": sid
 	}
 	r = requests.get(f"https://replit.com/data/repls/@{user}/{replname}", headers=headers, cookies=cookies)
+	return r.json()['id']
 
 @app.callback()
 def callback(ctx: typer.Context):
@@ -157,11 +158,6 @@ def push(override:bool=False):
 		return
 
 	key = __sid__.strip()
-	token, url = pyrepl.get_token(user, replname, key)
-	id = get_json(user, replname, key)
-	client = pyrepl.Client(token, id, url)
-	channel = client.open('gcsfiles', 'file_persister')
-	channel.get_output({"persist": { path: "" }})
 
 	if not override:
 		files = glob.glob("*")
@@ -189,7 +185,15 @@ def push(override:bool=False):
 
 				if "." in newfile or noExtFile:
 					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
-					channel.get_output({"write": {"path": newfile, "content": open(newfile, "r").read()}})
+					r = requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
+						"UUID": uuid,
+						"username": user,
+						"repl": replname,
+						"sid": key,
+						"filepath": newfile,
+						"content": open(newfile, "r").read()
+					}),
+					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
 				done.append(newfile)
 				noExtFile = False
@@ -224,7 +228,14 @@ def push(override:bool=False):
 							file = file.replace("\\", "/")
 
 				if "." in newfile or noExtFile:
-					channel.get_output({"remove": {"path": newfile}})
+					r = requests.delete("https://replops.coolcodersj.repl.co", data=json.dumps({
+						"UUID": uuid,
+						"username": user,
+						"repl": replname,
+						"sid": key,
+						"filepath": newfile,
+					}),
+					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
 				done.append(newfile)
 				noExtFile = False
@@ -251,7 +262,15 @@ def push(override:bool=False):
 
 				if "." in newfile:
 					print(f"REFRESHING FILE/DIR ON SERVER - {newfile}")
-					channel.get_output({"write": {"path": newfile, "content": open(newfile, "r").read()}})
+					r = requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
+						"UUID": uuid,
+						"username": user,
+						"repl": replname,
+						"sid": key,
+						"filepath": newfile,
+						"content": open(newfile, "r").read()
+					}),
+					headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
 				done.append(newfile)
 
@@ -485,11 +504,7 @@ def env(contents:bool=True, key:str="", value:str="", delete:str=""):
 		return
 
 	key = __sid__.strip()
-	token, url = pyrepl.get_token(user, replname, key)
-	id = get_json(user, replname, key)
-	client = pyrepl.Client(token, id, url)
-	channel = client.open('gcsfiles', 'file_persister')
-	channel.get_output({"persist": { path: "" }})
+
 
 	if not os.path.exists(f".tempcache/{file}"):
 		f = open(f".tempcache/{file}", "x")
@@ -527,7 +542,16 @@ def env(contents:bool=True, key:str="", value:str="", delete:str=""):
 	f = open(".env", "w")
 	f.write(string)
 	f.close()
-	channel.get_output({"write": {"path": file, "content": string}})
+
+	r = requests.post("https://replops.coolcodersj.repl.co", data=json.dumps({
+		"UUID": id,
+		"username": user,
+		"repl": replname,
+		"sid": key,
+		"filepath": file,
+		"content": string
+	}),
+	headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
 
 @app.command(help="Edit the Replit DB for a Repl")
 def db(url:str, data:bool=False, key:str="", value:str="", delete:str=""):

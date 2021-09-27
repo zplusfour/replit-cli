@@ -12,7 +12,7 @@ replit = "repl_cli.main:app"
 python = "^3.8"
 typer = {extras = ["all"], version = "^0.3.2"}
 requests = {extras = ["all"], version = "^2.25.1"}
-snow-pyrepl = {extras = ["all"], version = "^0.5.1"}
+snow-pyrepl = {extras = ["all"], version = "^0.50"}
 replit = {extras = ["all"], version = "^3.1.0"}
 
 [tool.poetry.dev-dependencies]
