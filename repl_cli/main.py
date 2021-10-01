@@ -1,11 +1,14 @@
-import typer, requests, os, zipfile, glob, shutil, json, sys
+import typer, requests, os, zipfile, glob, shutil, json, sys, time, logging
 from pathlib import Path
 import snow_pyrepl as pyrepl
 from typing import Optional
 from replit.database import Database
 import getpass
+from watchdog.observers import Observer
+from watchdog.events import LoggingEventHandler
 
-__version__ = "1.1.8"
+
+__version__ = "1.1.9"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
@@ -141,6 +144,80 @@ def pull(override:bool=False):
 					done.append(newfile)
 		shutil.rmtree(".temp")
 	typer.echo(f"Refreshed Local Repl Dir")
+
+
+@app.command(help="Create a live file watching service to automatically save changes")
+def livewatch():
+	f = open(".replitcliconfig", "r")
+	content = f.read()
+	f.close()
+	url = content.split("=")[1].split("\n")[0]
+	uuid = content.split("=")[-1].strip()
+	sid = __sid__.strip()
+	slug = url.split("/@")[-1].split("\n")[0].strip()
+	user, replname = slug.split("/")[0], slug.split("/")[1]
+	data = requests.get(f"https://replit.com/data/repls/@{slug}", cookies={"connect.sid": sid}).json()
+	if not data['is_owner']:
+		typer.echo("You do not have the correct permissions to write to this repl.")
+		return
+
+	key = __sid__.strip()
+
+	def delete_file(filename):
+		r = requests.delete("https://replops.coolcodersj.repl.co", data=json.dumps({
+			"UUID": uuid,
+			"username": user,
+			"repl": replname,
+			"sid": key,
+			"filepath": filename
+		}),
+		headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+
+	def write_file(filename, content):
+		r = requests.delete("https://replops.coolcodersj.repl.co", data=json.dumps({
+			"UUID": uuid,
+			"username": user,
+			"repl": replname,
+			"sid": key,
+			"filepath": filename,
+			"content": content
+		}),
+		headers = {'Content-type': 'application/json', 'Accept': 'text/plain'})
+
+	class Event(LoggingEventHandler):
+		def dispatch(self, event):
+			path = event.src_path.replace("\\", "/")[2:]
+			if str(type(event)) == "<class 'watchdog.events.FileCreatedEvent'>":
+				print(f"Created {path}")
+				write_file(path, "")
+			if str(type(event)) == "<class 'watchdog.events.FileModifiedEvent'>":
+				print(f"Modified {path}")
+				write_file(path, open(path, "r").read())
+			if str(type(event)) == "<class 'watchdog.events.FileMovedEvent'>":
+				destPath = event.dest_path.replace("\\\\", "/")[2:]
+				print(f"Moved {path} to {destPath}")
+				delete_file(path)
+				write_file(destPath, open(destPath, "r").read())
+			if str(type(event)) == "<class 'watchdog.events.FileDeletedEvent'>":
+				print(f"Deleted {path}")
+				delete_file(path)
+
+	logging.basicConfig(level=logging.INFO,
+						format='%(asctime)s - %(message)s',
+						datefmt='%Y-%m-%d %H:%M:%S')
+	path = "."
+	event_handler = Event()
+	observer = Observer()
+	observer.schedule(event_handler, path, recursive=True)
+	observer.start()
+	print("File watching service started....enter ^C to quit. (CTRL + C or CMD + C)")
+	try:
+		while True:
+			time.sleep(1)
+	except KeyboardInterrupt:
+		observer.stop()
+	observer.join()
+
 
 @app.command(help="Push changes to the server and override remote.")
 def push(override:bool=False):
