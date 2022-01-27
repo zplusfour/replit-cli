@@ -356,11 +356,11 @@ def login(sid:str=None):
 	if sid != None:
 		if not os.path.exists(f"{homedir}/replit-cli"):
 			os.mkdir(f"{homedir}/replit-cli")
-			f = open(f"{homedir}/replit-cli/connect.sid", "w")
-			print(f"""{sid}""", file=f)
-			f.close()
-			typer.echo(f"Your SID value has been set as {sid}")
-			return
+		f = open(f"{homedir}/replit-cli/connect.sid", "w")
+		print(f"""{sid}""", file=f)
+		f.close()
+		typer.echo(f"Your SID value has been set as {sid}")
+		return
 	username = typer.prompt("Enter your username")
 	password = getpass.getpass()
 	openconfirm = typer.confirm("Replit Login requires an hcaptcha token. You can retrieve one from https://sjurl.tk/captcha. Would you like to visit this site?")
