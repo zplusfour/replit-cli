@@ -8,7 +8,7 @@ from watchdog.observers import Observer
 from watchdog.events import LoggingEventHandler
 
 
-__version__ = "1.1.9"
+__version__ = "1.2.0"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 try:
