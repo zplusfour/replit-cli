@@ -7,10 +7,10 @@ import getpass
 from watchdog.observers import Observer
 from watchdog.events import LoggingEventHandler
 
-
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
+
 try:
 	__sid__ = open(f"{homedir}/replit-cli/connect.sid", "r").read().strip()
 except:
@@ -507,15 +507,8 @@ def shell(repl:str):
 		output = output2
 		output = bytes(output, "utf-8").decode("unicode_escape")
 		print(output)
-	try:
-		channel2 = client.open("exec", "runner")
-		channel2.get_output({
-			"exec": {
-				"args": ['kill', '1']
-			}
-		})
-	except:
-		pass
+
+	client.close()
 
 @app.command(help="Execute a command to run on the remote repl.")
 def exec(repl:str, cmd:str):
@@ -541,15 +534,7 @@ def exec(repl:str, cmd:str):
 	output = output2
 	output = bytes(output, "utf-8").decode("unicode_escape")
 	print(output)
-	try:
-		channel2 = client.open("exec", "runner")
-		channel2.get_output({
-			"exec": {
-				"args": ['kill', '1']
-			}
-		})
-	except:
-		pass
+	client.close()
 
 @app.command(help="Interact with the Environment of the Repl of the Current Working Directory.")
 def env(contents:bool=True, key:str="", value:str="", delete:str=""):
