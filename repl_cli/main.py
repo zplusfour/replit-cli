@@ -12,7 +12,7 @@ homedir = Path.home()
 homedir = str(homedir).replace("\\", "/")
 
 try:
-	__sid__ = open(f"{homedir}/replit-cli/connect.sid", "r").read().strip()
+	__sid__ = open(f"{homedir}/repl-cli/connect.sid", "r").read().strip()
 except:
 	__sid__ = None
 
@@ -37,7 +37,7 @@ def callback(ctx: typer.Context):
 	cmd = ctx.invoked_subcommand
 	listofcmds = ["clone", "env", "pull", "push", "exec", "shell", "run"]
 	if cmd in listofcmds:
-		if not os.path.exists(f"{homedir}/replit-cli/connect.sid"):
+		if not os.path.exists(f"{homedir}/repl-cli/connect.sid"):
 			typer.echo("You have not authenticated with Replit CLI yet. To run that command, first run the following command-\nreplit login --help")
 			raise typer.Exit()
 
@@ -354,9 +354,9 @@ def push(override:bool=False):
 @app.command(help="Authenticate with Replit CLI.\n\nTo get your SID value, check the cookie named 'connect.sid' when you visit Replit in your browser.")
 def login(sid:str=None):
 	if sid != None:
-		if not os.path.exists(f"{homedir}/replit-cli"):
-			os.mkdir(f"{homedir}/replit-cli")
-		f = open(f"{homedir}/replit-cli/connect.sid", "w")
+		if not os.path.exists(f"{homedir}/repl-cli"):
+			os.mkdir(f"{homedir}/repl-cli")
+		f = open(f"{homedir}/repl-cli/connect.sid", "w")
 		print(f"""{sid}""", file=f)
 		f.close()
 		typer.echo(f"Your SID value has been set as {sid}")
@@ -394,9 +394,9 @@ def login(sid:str=None):
 		typer.echo(f"Error! An unexpected error ocurred: HTTP Status was not 200. Received status was {r.status_code}")
 		return
 
-	if not os.path.exists(f"{homedir}/replit-cli"):
-		os.mkdir(f"{homedir}/replit-cli")
-	f = open(f"{homedir}/replit-cli/connect.sid", "w")
+	if not os.path.exists(f"{homedir}/repl-cli"):
+		os.mkdir(f"{homedir}/repl-cli")
+	f = open(f"{homedir}/repl-cli/connect.sid", "w")
 	print(f"""{sid}""", file=f)
 	f.close()
 	typer.echo(f"Your SID value has been set as {sid}")
